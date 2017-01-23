@@ -10,7 +10,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
-
 import org.intellij.lang.annotations.MagicConstant;
 import org.junit.Before;
 import org.junit.Test;
@@ -210,6 +209,160 @@ public class CalendarPickerViewTest {
     assertCell(cells, 2, 5, 15, true, false, false, true, NONE);
     // 11/16 is not selectable because it's > maxDate (11/16/13).
     assertCell(cells, 2, 6, 16, true, false, false, false, NONE);
+  }
+
+  @Test public void testInitRangeSelectionDateWithNonRangeSelectionModes() throws Exception {
+    // This one should work.
+    view.init(minDate, maxDate, timeZone, locale) //
+        .inMode(SINGLE) //
+        .withSelectedDate(minDate);
+
+    // Now try init'ing using SelectionDate.FIRST mode.
+    try {
+      view.init(minDate, maxDate, timeZone, locale) //
+          .inMode(SINGLE) //
+          .withSelectedDate(minDate)
+          .withSelectionDate(CalendarPickerView.RangeSelectionDate.FIRST);
+
+      fail("You can't init the Calendar using RangeSelectionDate.FIRST or RangeSelectionDate.LAST "
+          + "without using SelectionMode.RANGE");
+    } catch (UnsupportedOperationException expected) {
+    }
+
+    // again using multiple
+    try {
+      view.init(minDate, maxDate, timeZone, locale) //
+          .inMode(MULTIPLE) //
+          .withSelectedDate(minDate)
+          .withSelectionDate(CalendarPickerView.RangeSelectionDate.FIRST);
+
+      fail("You can't init the Calendar using RangeSelectionDate.FIRST or RangeSelectionDate.LAST "
+          + "without using SelectionMode.RANGE");
+    } catch (UnsupportedOperationException expected) {
+    }
+
+    // Now try init'ing again using SelectionDate.LAST mode.
+    try {
+      view.init(minDate, maxDate, timeZone, locale) //
+          .inMode(SINGLE) //
+          .withSelectedDate(minDate)
+          .withSelectionDate(CalendarPickerView.RangeSelectionDate.LAST);
+
+      fail("You can't init the Calendar using RangeSelectionDate.FIRST or RangeSelectionDate.LAST "
+          + "without using SelectionMode.RANGE");
+    } catch (UnsupportedOperationException expected) {
+    }
+
+    // again using multiple
+    try {
+      view.init(minDate, maxDate, timeZone, locale) //
+          .inMode(MULTIPLE) //
+          .withSelectedDate(minDate)
+          .withSelectionDate(CalendarPickerView.RangeSelectionDate.LAST);
+
+      fail("You can't init the Calendar using RangeSelectionDate.FIRST or RangeSelectionDate.LAST "
+          + "without using SelectionMode.RANGE");
+    } catch (UnsupportedOperationException expected) {
+    }
+  }
+
+  @Test public void testInitRangeSelectionDateWithLessThanTwoDatesSelected() throws Exception {
+    List<Date> selectedDates = new ArrayList<Date>();
+    Calendar firstSelection = buildCal(2012, NOVEMBER, 17);
+    selectedDates.add(firstSelection.getTime());
+    Calendar lastSelection = buildCal(2012, NOVEMBER, 21);
+    selectedDates.add(lastSelection.getTime());
+
+    // These should work.
+    view.init(minDate, maxDate, timeZone, locale) //
+        .inMode(RANGE) //
+        .withSelectedDates(selectedDates)
+        .withSelectionDate(CalendarPickerView.RangeSelectionDate.FIRST);
+
+    view.init(minDate, maxDate, timeZone, locale) //
+        .inMode(RANGE) //
+        .withSelectedDates(selectedDates)
+        .withSelectionDate(CalendarPickerView.RangeSelectionDate.LAST);
+
+    // Now try init'ing again using incorrect order.
+    try {
+      view.init(minDate, maxDate, timeZone, locale) //
+          .inMode(RANGE) //
+          .withSelectionDate(CalendarPickerView.RangeSelectionDate.FIRST)
+          .withSelectedDates(selectedDates);
+
+      fail("There must be at least 2 dates selected to init with RangeSelectionDate.FIRST or RangeSelectionDate.LAST. "
+          + "Note: The dates should be initialised before calling withSelectionDate()");
+    } catch (UnsupportedOperationException expected) {
+    }
+
+    try {
+      view.init(minDate, maxDate, timeZone, locale) //
+          .inMode(RANGE) //
+          .withSelectionDate(CalendarPickerView.RangeSelectionDate.LAST)
+          .withSelectedDates(selectedDates);
+
+      fail("There must be at least 2 dates selected to init with RangeSelectionDate.FIRST or RangeSelectionDate.LAST. "
+          + "Note: The dates should be initialised before calling withSelectionDate()");
+    } catch (UnsupportedOperationException expected) {
+    }
+
+    // Now try init'ing again with only one date.
+    selectedDates.remove(1);
+    try {
+      view.init(minDate, maxDate, timeZone, locale) //
+          .inMode(RANGE) //
+          .withSelectedDates(selectedDates)
+          .withSelectionDate(CalendarPickerView.RangeSelectionDate.FIRST);
+
+      fail("There must be at least 2 dates selected to init with RangeSelectionDate.FIRST or RangeSelectionDate.LAST. "
+          + "Note: The dates should be initialised before calling withSelectionDate()");
+    } catch (UnsupportedOperationException expected) {
+    }
+
+    try {
+      view.init(minDate, maxDate, timeZone, locale) //
+          .inMode(RANGE) //
+          .withSelectedDates(selectedDates)
+          .withSelectionDate(CalendarPickerView.RangeSelectionDate.LAST);
+
+      fail("There must be at least 2 dates selected to init with RangeSelectionDate.FIRST or RangeSelectionDate.LAST. "
+          + "Note: The dates should be initialised before calling withSelectionDate()");
+    } catch (UnsupportedOperationException expected) {
+    }
+
+    // Now try init'ing again with only one date.
+    try {
+      view.init(minDate, maxDate, timeZone, locale) //
+          .inMode(RANGE) //
+          .withSelectedDate(lastSelection.getTime())
+          .withSelectionDate(CalendarPickerView.RangeSelectionDate.LAST);
+
+      fail("There must be at least 2 dates selected to init with SelectionDate.LAST. The dates should be"
+          + " initialised before calling withSelectionDate()");
+    } catch (UnsupportedOperationException expected) {
+    }
+
+    // Now try init'ing again with no dates.
+    try {
+      view.init(minDate, maxDate, timeZone, locale) //
+          .inMode(RANGE) //
+          .withSelectionDate(CalendarPickerView.RangeSelectionDate.FIRST);
+
+      fail("There must be at least 2 dates selected to init with SelectionDate.LAST. The dates should be"
+          + " initialised before calling withSelectionDate()");
+    } catch (UnsupportedOperationException expected) {
+    }
+
+    try {
+      view.init(minDate, maxDate, timeZone, locale) //
+          .inMode(RANGE) //
+          .withSelectionDate(CalendarPickerView.RangeSelectionDate.LAST);
+
+      fail("There must be at least 2 dates selected to init with SelectionDate.LAST. The dates should be"
+          + " initialised before calling withSelectionDate()");
+    } catch (UnsupportedOperationException expected) {
+    }
   }
 
   @Test public void testInitSingleWithMultipleSelections() throws Exception {
@@ -457,6 +610,195 @@ public class CalendarPickerViewTest {
     assertRangeSelectionBehavior();
   }
 
+  @Test public void testRangeDateSelectionSelectsNewFirstDateWithFirstSelection() throws Exception {
+    List<Date> selectedDates = new ArrayList<Date>();
+    Calendar firstSelection = buildCal(2012, NOVEMBER, 21);
+    selectedDates.add(firstSelection.getTime());
+    Calendar lastSelection = buildCal(2012, NOVEMBER, 24);
+    selectedDates.add(lastSelection.getTime());
+
+    view.init(minDate, maxDate, timeZone, locale) //
+        .inMode(RANGE)
+        .withSelectedDates(selectedDates)
+        .withSelectionDate(CalendarPickerView.RangeSelectionDate.FIRST);
+
+    assertThat(view.selectedCals).hasSize(2);
+    assertThat(view.selectedCells).hasSize(4);
+
+    Calendar nov18 = buildCal(2012, NOVEMBER, 18);
+    view.selectDate(nov18.getTime());
+    assertRangeSelected();
+
+    //add another date to assertRangeSelectionBehaviour
+    Calendar nov23 = buildCal(2012, NOVEMBER, 23);
+    view.selectDate(nov23.getTime());
+    assertRangeSelectionBehavior();
+  }
+
+  @Test public void testDateSelectionLastSelectsNewLastDateWithFirstSelection() throws Exception {
+    List<Date> selectedDates = new ArrayList<Date>();
+    Calendar firstSelection = buildCal(2012, NOVEMBER, 18);
+    selectedDates.add(firstSelection.getTime());
+    Calendar lastSelection = buildCal(2012, NOVEMBER, 21);
+    selectedDates.add(lastSelection.getTime());
+
+    view.init(minDate, maxDate, timeZone, locale) //
+        .inMode(RANGE)
+        .withSelectedDates(selectedDates)
+        .withSelectionDate(CalendarPickerView.RangeSelectionDate.LAST);
+
+    assertThat(view.selectedCals).hasSize(2);
+    assertThat(view.selectedCells).hasSize(4);
+
+    Calendar nov24 = buildCal(2012, NOVEMBER, 24);
+    view.selectDate(nov24.getTime());
+    assertRangeSelected();
+
+    assertRangeSelectionBehavior();
+  }
+
+  @Test public void testRangeDateSelectionSelectsNewSetOfDatesWhenSelectionIsAfterLastDate() throws Exception {
+    List<Date> selectedDates = new ArrayList<Date>();
+    Calendar firstSelection = buildCal(2012, NOVEMBER, 18);
+    selectedDates.add(firstSelection.getTime());
+    Calendar lastSelection = buildCal(2012, NOVEMBER, 24);
+    selectedDates.add(lastSelection.getTime());
+
+    view.init(minDate, maxDate, timeZone, locale) //
+        .inMode(RANGE)
+        .withSelectedDates(selectedDates)
+        .withSelectionDate(CalendarPickerView.RangeSelectionDate.FIRST);
+
+    Calendar dec18 = buildCal(2012, DECEMBER, 18);
+    view.selectDate(dec18.getTime());
+
+    assertOneDateSelected();
+
+    Calendar dec24 = buildCal(2012, DECEMBER, 24);
+    view.selectDate(dec24.getTime());
+
+    assertRangeSelected();
+    assertRangeSelectionBehavior();
+  }
+
+  @Test public void testRangeDateSelectionLastSelectsNewFirstDateWhenSelectionIsBeforeFirstDate() throws Exception {
+    List<Date> selectedDates = new ArrayList<Date>();
+    Calendar firstSelection = buildCal(2012, NOVEMBER, 18);
+    selectedDates.add(firstSelection.getTime());
+    Calendar lastSelection = buildCal(2012, NOVEMBER, 21);
+    selectedDates.add(lastSelection.getTime());
+
+    view.init(minDate, maxDate, timeZone, locale) //
+        .inMode(RANGE)
+        .withSelectedDates(selectedDates)
+        .withSelectionDate(CalendarPickerView.RangeSelectionDate.LAST);
+
+    assertThat(view.selectedCals).hasSize(2);
+    assertThat(view.selectedCells).hasSize(4);
+
+    Calendar nov17 = buildCal(2012, NOVEMBER, 17);
+    view.selectDate(nov17.getTime());
+    assertOneDateSelected();
+  }
+
+  @Test public void testRangeDateSelectionSelectsNewFirstDateWhenSelectionInMiddleOfRange() throws Exception {
+    List<Date> selectedDates = new ArrayList<Date>();
+    Calendar firstSelection = buildCal(2012, NOVEMBER, 16);
+    selectedDates.add(firstSelection.getTime());
+    Calendar lastSelection = buildCal(2012, NOVEMBER, 24);
+    selectedDates.add(lastSelection.getTime());
+
+    view.init(minDate, maxDate, timeZone, locale) //
+        .inMode(RANGE)
+        .withSelectedDates(selectedDates)
+        .withSelectionDate(CalendarPickerView.RangeSelectionDate.FIRST);
+
+    assertThat(view.selectedCals).hasSize(2);
+    assertThat(view.selectedCells).hasSize(9);
+
+    Calendar nov18 = buildCal(2012, NOVEMBER, 18);
+    view.selectDate(nov18.getTime());
+
+    assertRangeSelected();
+  }
+
+  @Test public void testDateSelectionLastSelectsNewLastDateWithFirstSelectionInMiddleOfRange() throws Exception {
+    List<Date> selectedDates = new ArrayList<Date>();
+    Calendar firstSelection = buildCal(2012, NOVEMBER, 18);
+    selectedDates.add(firstSelection.getTime());
+    Calendar lastSelection = buildCal(2012, NOVEMBER, 24);
+    selectedDates.add(lastSelection.getTime());
+
+    view.init(minDate, maxDate, timeZone, locale) //
+        .inMode(RANGE)
+        .withSelectedDates(selectedDates)
+        .withSelectionDate(CalendarPickerView.RangeSelectionDate.LAST);
+
+    assertRangeSelected();
+
+    Calendar nov20 = buildCal(2012, NOVEMBER, 20);
+    view.selectDate(nov20.getTime());
+    assertThat(view.selectedCals).hasSize(2);
+    assertThat(view.selectedCells).hasSize(3);
+  }
+
+  @Test public void testRangeDateSelectionSelectsNewFirstDateAndThenRevertsToLastOnNextSelection() throws Exception {
+    List<Date> selectedDates = new ArrayList<Date>();
+    Calendar firstSelection = buildCal(2012, NOVEMBER, 16);
+    selectedDates.add(firstSelection.getTime());
+    Calendar lastSelection = buildCal(2012, NOVEMBER, 26);
+    selectedDates.add(lastSelection.getTime());
+
+    view.init(minDate, maxDate, timeZone, locale) //
+        .inMode(RANGE)
+        .withSelectedDates(selectedDates)
+        .withSelectionDate(CalendarPickerView.RangeSelectionDate.FIRST);
+
+    assertThat(view.selectedCals).hasSize(2);
+    assertThat(view.selectedCells).hasSize(11);
+
+    Calendar nov18 = buildCal(2012, NOVEMBER, 18);
+    view.selectDate(nov18.getTime());
+
+    assertThat(view.selectedCals).hasSize(2);
+
+    Calendar nov24 = buildCal(2012, NOVEMBER, 24);
+    view.selectDate(nov24.getTime());
+
+    assertRangeSelected();
+    assertRangeSelectionBehavior();
+
+    Calendar nov20 = buildCal(2012, NOVEMBER, 20);
+    view.selectDate(nov20.getTime());
+    assertOneDateSelected();
+  }
+
+  @Test public void testRangeDateSelectionLastSelectsNewLastDateAndThenRevertsToFirstOnNextSelection() throws Exception {
+    List<Date> selectedDates = new ArrayList<Date>();
+    Calendar firstSelection = buildCal(2012, NOVEMBER, 18);
+    selectedDates.add(firstSelection.getTime());
+    Calendar lastSelection = buildCal(2012, NOVEMBER, 20);
+    selectedDates.add(lastSelection.getTime());
+
+    view.init(minDate, maxDate, timeZone, locale) //
+        .inMode(RANGE)
+        .withSelectedDates(selectedDates)
+        .withSelectionDate(CalendarPickerView.RangeSelectionDate.LAST);
+
+    assertThat(view.selectedCals).hasSize(2);
+    assertThat(view.selectedCells).hasSize(3);
+
+    Calendar nov24 = buildCal(2012, NOVEMBER, 24);
+    view.selectDate(nov24.getTime());
+
+    assertRangeSelected();
+    assertRangeSelectionBehavior();
+
+    Calendar nov20 = buildCal(2012, NOVEMBER, 20);
+    view.selectDate(nov20.getTime());
+    assertOneDateSelected();
+  }
+
   @Test public void testInitWithoutHighlightingCells() {
     view.init(minDate, maxDate, timeZone, locale) //
         .inMode(SINGLE);
@@ -503,8 +845,13 @@ public class CalendarPickerViewTest {
     assertThat(view.getSelectedDates()).hasSize(1);
 
     // Only Nov 24 is selected: going backward should start a new range.
-    view.selectDate(nov20.getTime());
+    Calendar nov18 = buildCal(2012, NOVEMBER, 18);
+    view.selectDate(nov18.getTime());
     assertOneDateSelected();
+
+    //finish range
+    view.selectDate(nov24.getTime());
+    assertRangeSelected();
   }
 
   @Test public void testRangeWithTwoInitialSelections() throws Exception {

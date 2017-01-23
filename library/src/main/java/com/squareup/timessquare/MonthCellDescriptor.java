@@ -5,7 +5,8 @@ package com.squareup.timessquare;
 import java.util.Date;
 
 /** Describes the state of a particular date cell in a {@link MonthView}. */
-class MonthCellDescriptor {
+class MonthCellDescriptor implements Comparable<MonthCellDescriptor> {
+
   public enum RangeState {
     NONE, FIRST, MIDDLE, LAST, FIRST_AND_LAST
   }
@@ -94,5 +95,10 @@ class MonthCellDescriptor {
         + ", rangeState="
         + rangeState
         + '}';
+  }
+
+  @Override
+  public int compareTo(MonthCellDescriptor another) {
+    return this.date.compareTo(another.getDate());
   }
 }

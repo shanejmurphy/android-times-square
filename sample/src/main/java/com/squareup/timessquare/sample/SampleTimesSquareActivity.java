@@ -13,8 +13,8 @@ import android.widget.Toast;
 import com.squareup.timessquare.CalendarCellDecorator;
 import com.squareup.timessquare.CalendarPickerView;
 import com.squareup.timessquare.CalendarPickerView.SelectionMode;
+import com.squareup.timessquare.CalendarPickerView.RangeSelectionDate;
 import com.squareup.timessquare.DefaultDayViewAdapter;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -138,9 +138,16 @@ public class SampleTimesSquareActivity extends Activity {
     customized.setOnClickListener(new OnClickListener() {
       @Override public void onClick(View view) {
         showCalendarInDialog("Pimp my calendar!", R.layout.dialog_customized);
+        Calendar today = Calendar.getInstance();
+        ArrayList<Date> dates = new ArrayList<>();
+        today.add(Calendar.DATE, 3);
+        dates.add(today.getTime());
+        today.add(Calendar.DATE, 6);
+        dates.add(today.getTime());
         dialogView.init(lastYear.getTime(), nextYear.getTime())
             .inMode(SelectionMode.RANGE)
-            .withSelectedDate(new Date());
+            .withSelectedDates(dates)
+            .withSelectionDate(RangeSelectionDate.FIRST);
       }
     });
 

@@ -61,6 +61,28 @@ public class CalendarPickerView extends ListView {
     RANGE
   }
 
+  public enum RangeSelectionDate {
+    /**
+     * Both dates are expected to be entered during this session, starting with the
+     * first date, finishing with the last date. This is the default, and will
+     * be used in almost all scenarios
+     */
+    BOTH,
+    /**
+     * First date will be initial date for selection. Used when in
+     * SelectionMode.RANGE and a range is already pre-selected and user only wants
+     * to change the first date. Will revert to NORMAL after selection
+     */
+    FIRST,
+    /**
+     * Last date will be the initial date for selection. Used when in
+     * SelectionMode.RANGE and a range is already pre-selected and user only wants
+     * to change the last date. Will revert to NORMAL after initial selection.
+     * If date selected is before the original first date then the logic will revert to NORMAL
+     */
+    LAST
+  }
+
   private final CalendarPickerView.MonthAdapter adapter;
   private final List<List<List<MonthCellDescriptor>>> cells = new ArrayList<>();
   final MonthView.Listener listener = new CellClickedListener();
@@ -79,6 +101,7 @@ public class CalendarPickerView extends ListView {
   private Calendar monthCounter;
   private boolean displayOnly;
   SelectionMode selectionMode;
+  RangeSelectionDate rangeSelectionDate;
   Calendar today;
   private int dividerColor;
   private int dayBackgroundResId;
@@ -208,6 +231,8 @@ public class CalendarPickerView extends ListView {
     fullDateFormat.setTimeZone(timeZone);
 
     this.selectionMode = SelectionMode.SINGLE;
+    this.rangeSelectionDate = RangeSelectionDate.BOTH;
+
     // Clear out any previously-selected dates/cells.
     selectedCals.clear();
     selectedCells.clear();
@@ -383,6 +408,23 @@ public class CalendarPickerView extends ListView {
 
     public FluentInitializer displayOnly() {
       displayOnly = true;
+      return this;
+    }
+
+    public FluentInitializer withSelectionDate(RangeSelectionDate selection) {
+      if (selectionMode != SelectionMode.RANGE
+          && (selection == RangeSelectionDate.FIRST || rangeSelectionDate == RangeSelectionDate.LAST)) {
+        throw new UnsupportedOperationException(
+            "You can't init the Calendar using RangeSelectionDate.FIRST or RangeSelectionDate.LAST "
+                + "without using SelectionMode.RANGE");
+      }
+      if (selectedCals.size() < 2
+          && (selection == RangeSelectionDate.FIRST || selection == RangeSelectionDate.LAST)) {
+        throw new UnsupportedOperationException(
+            "There must be at least 2 dates selected to init with RangeSelectionDate.FIRST or RangeSelectionDate.LAST. "
+                + "Note: The dates should be initialised before calling withSelectionDate()");
+      }
+      rangeSelectionDate = selection;
       return this;
     }
   }
@@ -637,11 +679,28 @@ public class CalendarPickerView extends ListView {
     switch (selectionMode) {
       case RANGE:
         if (selectedCals.size() > 1) {
-          // We've already got a range selected: clear the old one.
-          clearOldSelections();
-        } else if (selectedCals.size() == 1 && newlySelectedCal.before(selectedCals.get(0))) {
-          // We're moving the start of the range back in time: clear the old start date.
-          clearOldSelections();
+          // We've already got a range selected:
+          if (rangeSelectionDate == RangeSelectionDate.FIRST) {
+            // clear the middle and first selected dates
+            clearFirstAndMiddleSelections();
+          } else if (rangeSelectionDate == RangeSelectionDate.LAST) {
+            //just want to clear the middle and last selected dates
+            clearMiddleAndLastSelections();
+          } else {
+            // clear the old one.
+            clearOldSelections();
+          }
+        }
+        if (selectedCals.size() == 1) {
+          if (newlySelectedCal.before(selectedCals.get(0))) {
+            if (RangeSelectionDate.FIRST != rangeSelectionDate) {
+              // We're moving the start of the range back in time: clear the old start date.
+              clearOldSelections();
+            }
+          } else if (newlySelectedCal.after(selectedCals.get(0)) && RangeSelectionDate.FIRST == rangeSelectionDate) {
+            // We're moving the start of the range back in time: clear the old start date.
+            clearOldSelections();
+          }
         }
         break;
 
@@ -660,10 +719,15 @@ public class CalendarPickerView extends ListView {
       // Select a new cell.
       if (selectedCells.size() == 0 || !selectedCells.get(0).equals(cell)
             || (selectionMode == SelectionMode.RANGE && selectedCells.get(0).equals(cell))) {
-        selectedCells.add(cell);
+        if (RangeSelectionDate.FIRST == rangeSelectionDate) {
+          selectedCells.add(0, cell);
+          selectedCals.add(0, newlySelectedCal);
+        } else {
+          selectedCells.add(cell);
+          selectedCals.add(newlySelectedCal);
+        }
         cell.setSelected(true);
       }
-      selectedCals.add(newlySelectedCal);
 
       if (selectionMode == SelectionMode.RANGE && selectedCells.size() > 1) {
         // Select all days in between start and end.
@@ -693,6 +757,10 @@ public class CalendarPickerView extends ListView {
       }
     }
 
+    Collections.sort(selectedCells);
+    Collections.sort(selectedCals);
+    updateRangeDateSelection();
+
     // Update the adapter.
     validateAndUpdate();
     return date != null;
@@ -720,6 +788,76 @@ public class CalendarPickerView extends ListView {
     selectedCals.clear();
   }
 
+  private void clearFirstAndMiddleSelections() {
+    if (!(selectionMode == SelectionMode.RANGE && rangeSelectionDate == RangeSelectionDate.FIRST)) {
+      return;
+    }
+
+    for (MonthCellDescriptor selectedCell : selectedCells) {
+      int index = selectedCells.indexOf(selectedCell);
+      if (index == selectedCells.size() - 1) {
+        continue;
+      }
+
+      // De-select the currently-selected cell.
+      selectedCell.setSelected(false);
+      if (dateListener != null) {
+        Date selectedDate = selectedCell.getDate();
+
+        if (index == 0) {
+          dateListener.onDateUnselected(selectedDate);
+        }
+      }
+    }
+
+    resetSelectionsToLast();
+  }
+
+  private void resetSelectionsToLast() {
+    MonthCellDescriptor endCell = selectedCells.get(selectedCells.size() - 1);
+    selectedCells.clear();
+    selectedCells.add(endCell);
+
+    Calendar endCal = selectedCals.get(selectedCals.size() - 1);
+    selectedCals.clear();
+    selectedCals.add(endCal);
+  }
+
+  private void clearMiddleAndLastSelections() {
+    if (!(selectionMode == SelectionMode.RANGE && rangeSelectionDate == RangeSelectionDate.LAST)) {
+      return;
+    }
+
+    for (MonthCellDescriptor selectedCell : selectedCells) {
+      int index = selectedCells.indexOf(selectedCell);
+      if (index == 0) {
+        continue;
+      }
+
+      // De-select the currently-selected cell.
+      selectedCell.setSelected(false);
+      if (dateListener != null) {
+        Date selectedDate = selectedCell.getDate();
+
+        if (index == selectedCells.size() - 1) {
+          dateListener.onDateUnselected(selectedDate);
+        }
+      }
+    }
+
+    resetSelectionsToFirst();
+  }
+
+  private void resetSelectionsToFirst() {
+    MonthCellDescriptor startingCell = selectedCells.get(0);
+    selectedCells.clear();
+    selectedCells.add(startingCell);
+
+    Calendar startingCal = selectedCals.get(0);
+    selectedCals.clear();
+    selectedCals.add(startingCal);
+  }
+
   private Date applyMultiSelect(Date date, Calendar selectedCal) {
     for (MonthCellDescriptor selectedCell : selectedCells) {
       if (selectedCell.getDate().equals(date)) {
@@ -737,6 +875,10 @@ public class CalendarPickerView extends ListView {
       }
     }
     return date;
+  }
+
+  private void updateRangeDateSelection() {
+    rangeSelectionDate = rangeSelectionDate == RangeSelectionDate.FIRST ? RangeSelectionDate.LAST : RangeSelectionDate.BOTH;
   }
 
   public void highlightDates(Collection<Date> dates) {
